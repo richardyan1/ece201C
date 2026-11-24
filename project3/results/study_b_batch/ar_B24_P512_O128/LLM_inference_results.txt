@@ -1,0 +1,22 @@
+
+
+==============================================
+LLM Inference Results
+==============================================
+Execution Mode: analytical
+Inference Time for batch: 2.52s
+Prefill Time: 0.688s
+Decode Time: 1.827s
+Time to First Token: 0.703s
+Decode Generations per Second: start=70.55, mid(token 64)=70.05, end=69.56
+Aggregate Decode Throughput Tok/s (batch=24, replica_count=1): start=1693.21, mid(token 64)=1681.13, end=1669.42
+
+For more info, turn on debug flags. See examples/llm_astra_inference_debug_graphviz.sh
+Parallelisms: tp:1, cp:1, ep:1, pp:1, dp:1
+Network Topology [dims=3]
+  • dim0 torus2d_tp : tp 1 × cp 1 × ep 1 ⇒ size 1
+  • dim1 inter_torus_infiniband : pp 1 × dp 1 ⇒ size 1
+  • dim2 inter_torus_infiniband_dp : (none) ⇒ size 1
+  replica_count: 1 (throughput-only)
+  => aggregate = 1 GPUs per modeled replica
+  => effective total GPUs = 1

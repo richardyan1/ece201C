@@ -1,0 +1,35 @@
+[decode] block_size=1, refine_rounds=1, blocks=256, model calls=256
+[decode] sample step 0: seq_len=513, time=0.0178s
+[decode] sample step 255: seq_len=768, time=0.0189s
+[decode] integration segment 0->255: width=255, midpoint=0.0183s, contribution=4.6714s
+[decode] total interpolated decode time: 4.6892s, energy: 6.0127J from 2 samples
+[prefill] time: 1.8208s, [decode] time: 4.6892s, [total] time: 6.5100s
+[kv-cache] prefill_store=4.0 GiB, decode_store=2.0 GiB, decode_fetch=1.2 TiB
+[prefill] energy: 4.01J, energy/tok: 122.41µJ [decode] energy: 6.01J, energy/tok: 366.99µJ [total] energy: 10.02J, energy/tok: 203.93µJ
+
+
+============================================================
+TOPOLOGY/NETWORK
+============================================================
+Parallelisms: tp:1, cp:1, ep:1, pp:1, dp:1
+Network Topology [dims=3]
+  • dim0 torus2d_tp : tp 1 × cp 1 × ep 1 ⇒ size 1
+  • dim1 inter_torus_infiniband : pp 1 × dp 1 ⇒ size 1
+  • dim2 inter_torus_infiniband_dp : (none) ⇒ size 1
+  replica_count: 1 (throughput-only)
+  => aggregate = 1 GPUs per modeled replica
+  => effective total GPUs = 1
+============================================================
+RESULTS
+============================================================
+LLM inference time: 6.51s (mode=analytical)
+LLM time to first token: 1.84s
+Decode sequences/s: start=56.25, mid(token 128)=54.58, end=53.02
+Aggregate decode throughput tok/s (batch=64, replica_count=1): start=3599.88, mid(token 128)=3493.21, end=3393.45
+LLM inference results written to output\LLM\LLM_inference_results.txt
+============================================================
+RAPID-LLM wall-clock time: 12.00s
+
+
+
+--- stderr ---

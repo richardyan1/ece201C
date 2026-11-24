@@ -1,0 +1,29 @@
+model_param:
+  mode: LLM
+  run_type: inference
+  model_type: llama
+  tied_embeddings: false
+  global_batch_size: 64
+  gradient_accumulation_steps: 1
+  seq_len: 640
+  decode_len: 128
+  hidden_dim: 4096
+  num_layers: 32
+  vocab_size: 128256
+  intermediate_size: 14336
+  attention:
+    attention_type: gqa
+    num_heads: 32
+    kv_heads: 8
+    use_flashattention: true
+    attention_tile_size: 128
+  moe:
+    num_experts: 1
+    top_k: 1
+    moe_intermediate_size: 14336
+    n_shared_experts: 0
+    moe_layer_freq: 1
+    first_k_dense_replace: 32
+project_param:
+  block_size: 16
+  refine_rounds: 8
