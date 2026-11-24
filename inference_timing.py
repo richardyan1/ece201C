@@ -138,7 +138,7 @@ class TimeCalculationLLMInference(TimeCalculationLLM):
         mla_decode = str(getattr(self, "attention_type", "mha")).lower() == "mla" and run_type == "inference"
 
 
-        output_seq_len = 1  # tokens per decode call; query_tokens (H2) is threaded but unused
+        output_seq_len = int(query_tokens)  # tokens per decode call; query_tokens (H2) is threaded but unused
 
         transformer_timings: Dict[str, OperationTiming] = {}
 
@@ -886,6 +886,7 @@ class TimeCalculationLLMInference(TimeCalculationLLM):
 
         decode_peak_gb = prefill_peak_gb
         if decode_len > 0:
+            decode_query_tokens = int(self.project_param.get("block_size", 1))
             decode_gemm_shapes = llm_util.process_decode_gemm_shapes(
                 self,
                 batch_size=batch_size,
@@ -896,7 +897,7 @@ class TimeCalculationLLMInference(TimeCalculationLLM):
                 intermediate_size=self.moe_intermediate_size if self.use_moe else intermediate_size,
                 vocab_size=vocab_size,
                 model_type=self.model_type,
-                query_tokens=1,  # H2: tokens per decode call for the decode memory peak
+                query_tokens=decode_query_tokens,  # H2: tokens per decode call for the decode memory peak
             )
             (
                 decode_pipeline_graph,
@@ -914,7 +915,7 @@ class TimeCalculationLLMInference(TimeCalculationLLM):
                 batch_size=batch_size,
                 total_seq_len=self.seq_len,
                 gemm_shapes=decode_gemm_shapes,
-                query_tokens=1,
+                query_tokens=decode_query_tokens,
             )
             decode_dispatcher = LLMExecutionDispatcher(
                 time_calc=self,
@@ -932,7 +933,7 @@ class TimeCalculationLLMInference(TimeCalculationLLM):
             decode_memory_data = mem_estimator.build_memory_data(
                 mode="inference",
                 batch_size=batch_size,
-                seq_len=1,
+                seq_len=decode_query_tokens,
                 gemm_shapes=decode_gemm_shapes,
                 kv_cache_tokens=self.seq_len,
             )

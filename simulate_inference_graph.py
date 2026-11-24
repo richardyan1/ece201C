@@ -123,14 +123,30 @@ class DecodeGraph(Graph):
         Returns:
             Tuple of (total_decode_time, list_of_decode_samples)
         """
+        project_param = dict(getattr(self.model_config, "project_param", None) or {})
+        block_size = int(project_param.get("block_size", 1))
+        refine_rounds = int(project_param.get("refine_rounds", 1))
+        if block_size < 1 or refine_rounds < 1:
+            raise ValueError("project_param block_size and refine_rounds must be >= 1")
+        if self.config.decode_len % block_size != 0:
+            raise ValueError(
+                f"decode_len ({self.config.decode_len}) must be a multiple of block_size ({block_size})"
+            )
+        num_blocks = self.config.decode_len // block_size
+        self.model_calls = num_blocks * refine_rounds
+        print(
+            f"[decode] block_size={block_size}, refine_rounds={refine_rounds}, "
+            f"blocks={num_blocks}, model calls={self.model_calls}"
+        )
+
         # Determine decode steps we actually simulate
-        sample_points = self._generate_sample_points()
+        sample_points = self._generate_sample_points(num_blocks)
 
         # Execute graphs at sample points
         decode_samples = []
-        query_tokens = 1  # Course helper H2: new tokens per decode call (Projects 3 and 4)
+        query_tokens = block_size  # Course helper H2: new tokens per decode call (Projects 3 and 4)
         for step_id in sample_points:
-            generated_tokens = step_id + 1
+            generated_tokens = (step_id + 1) * block_size
             total_seq_len = self.config.seq_len + generated_tokens
 
             gemm_shapes = llm_util.process_decode_gemm_shapes(
@@ -146,12 +162,14 @@ class DecodeGraph(Graph):
                 query_tokens=query_tokens,
             )
 
-            sample_time, sample_energy = self._execute_decode_step(
+            call_time, call_energy = self._execute_decode_step(
                 step_id=step_id,
                 total_seq_len=total_seq_len,
                 gemm_shapes=gemm_shapes,
                 query_tokens=query_tokens,
             )
+            sample_time = refine_rounds * call_time
+            sample_energy = refine_rounds * call_energy
 
             decode_samples.append(
                 DecodeSample(
@@ -164,23 +182,25 @@ class DecodeGraph(Graph):
                 )
             )
 
-        total_decode_time, total_decode_energy = self._integrate_decode_samples(decode_samples)
+        total_decode_time, total_decode_energy = self._integrate_decode_samples(decode_samples, num_blocks)
 
         return total_decode_time, total_decode_energy, decode_samples
 
-    def _generate_sample_points(self) -> List[int]:
+    def _generate_sample_points(self, num_steps: Optional[int] = None) -> List[int]:
         """Generate decode step sample points based on sampling configuration."""
+        if num_steps is None:
+            num_steps = self.config.decode_len
         sample_points = []
 
         # Always sample step 0 (first decode step)
         sample_points.append(0)
 
         # Sample at regular intervals
-        for step_id in range(self.config.sample_every - 1, self.config.decode_len, self.config.sample_every):
+        for step_id in range(self.config.sample_every - 1, num_steps, self.config.sample_every):
             sample_points.append(step_id)
 
         # Always sample the last step if configured
-        last_step = self.config.decode_len - 1
+        last_step = num_steps - 1
         if last_step not in sample_points:
             sample_points.append(last_step)
 
@@ -272,13 +292,15 @@ class DecodeGraph(Graph):
             )
         return result.total_time, energy
 
-    def _integrate_decode_samples(self, samples: List[DecodeSample]) -> float:
+    def _integrate_decode_samples(self, samples: List[DecodeSample], num_steps: Optional[int] = None) -> float:
         """
         Integrate execution times between sample points using linear interpolation.
 
         Since attention cost grows linearly, we can use trapezoid rule integration
         to get accurate total time from sparse samples.
         """
+        if num_steps is None:
+            num_steps = self.config.decode_len
         if not samples:
             raise ValueError("No decode samples available for integration")
 
@@ -315,7 +337,7 @@ class DecodeGraph(Graph):
             )
 
         last_sample = samples[-1]
-        remaining_steps = self.config.decode_len - (last_sample.step_id + 1)
+        remaining_steps = num_steps - (last_sample.step_id + 1)
         if remaining_steps > 0:
             tail_time = remaining_steps * last_sample.execution_time
             total_time += tail_time

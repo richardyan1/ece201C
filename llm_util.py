@@ -1087,10 +1087,9 @@ def autoregressive_decoder_gemm(self, batch_size, current_seq_len, d_model, num_
     Returns:
         OrderedDict: GEMM shapes [M, K, N] for decode step operations
     """
-    if query_tokens != 1:
-        raise NotImplementedError(
-            "query_tokens != 1 is Project 3/4: decide which 1s below become query_tokens"
-        )
+    q = int(query_tokens)
+    if q < 1:
+        raise ValueError("query_tokens must be >= 1")
     assert num_heads % kv_heads == 0, "num_heads must be divisible by kv_heads"
     head_dim, q_size, kv_size = attention_dim_sizes(
         d_model,
@@ -1107,6 +1106,8 @@ def autoregressive_decoder_gemm(self, batch_size, current_seq_len, d_model, num_
 
     # Decode-specific GEMM shapes with KV-cache handling (always enabled)
     if attention_type == "mla" and run_type == "inference":
+        if q != 1:
+            raise NotImplementedError("query_tokens != 1 is not modeled for MLA decode")
         runtime_ops = mla_decode_runtime_op_shapes(
             batch_size=batch_size,
             query_seq_len=1,
@@ -1148,12 +1149,12 @@ def autoregressive_decoder_gemm(self, batch_size, current_seq_len, d_model, num_
         )
     else:
         # QKV Projection: Only the new token (seq_len = 1)
-        gemms["qkv_proj"] = (batch_size, 1, d_model, q_size + 2 * kv_size)
+        gemms["qkv_proj"] = (batch_size, q, d_model, q_size + 2 * kv_size)
 
         # Attention Score: Q(new) @ K(cached+new)
         gemms["attention_score"] = (
             batch_size * kv_heads,
-            1 * shared_heads,
+            q * shared_heads,
             head_dim,
             current_seq_len,
         )
@@ -1161,7 +1162,7 @@ def autoregressive_decoder_gemm(self, batch_size, current_seq_len, d_model, num_
         # Attention Output: attention_weights @ V(cached+new)
         gemms["attention_output"] = (
             batch_size * kv_heads,
-            1 * shared_heads,
+            q * shared_heads,
             current_seq_len,
             head_dim,
         )
@@ -1170,7 +1171,7 @@ def autoregressive_decoder_gemm(self, batch_size, current_seq_len, d_model, num_
 
     # Output projection & FFNs only process the new token
     if not (attention_type == "mla" and run_type == "inference"):
-        gemms["output_proj"] = (batch_size, 1, q_size, d_model)
+        gemms["output_proj"] = (batch_size, q, q_size, d_model)
     projected_dim = (
         2 * intermediate_size
         if uses_gated_mlp(model_type, swiglu_mlp=getattr(self, "swiglu_mlp", False))
@@ -1184,13 +1185,13 @@ def autoregressive_decoder_gemm(self, batch_size, current_seq_len, d_model, num_
             else moe_intermediate
         )
         # MoE GEMM shapes use token-owner dimensions; dispatch/combine modeled separately.
-        gemms["ffn1"] = (batch_size, 1, d_model, projected_dim)
-        gemms["ffn2"] = (batch_size, 1, moe_intermediate, d_model)
+        gemms["ffn1"] = (batch_size, q, d_model, projected_dim)
+        gemms["ffn2"] = (batch_size, q, moe_intermediate, d_model)
     else:
-        gemms["ffn1"] = (batch_size, 1, d_model, projected_dim) 
-        gemms["ffn2"] = (batch_size, 1, intermediate_size, d_model)
-    gemms["linear"] = (batch_size, 1, d_model, vocab_size)
-    gemms["router"] = (batch_size, 1, d_model, getattr(self, "moe_num_experts", 1))
+        gemms["ffn1"] = (batch_size, q, d_model, projected_dim) 
+        gemms["ffn2"] = (batch_size, q, intermediate_size, d_model)
+    gemms["linear"] = (batch_size, q, d_model, vocab_size)
+    gemms["router"] = (batch_size, q, d_model, getattr(self, "moe_num_experts", 1))
 
     return gemms
 
