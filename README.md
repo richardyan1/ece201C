@@ -96,7 +96,7 @@ To run a single suite by hand: `python project3/run_cases.py <suite>`.
 | `baseline_after_change` | Normal (AR) decode, batch 1/16/64, prompt 512, output 128/256: the comparison for the required runs | yes |
 | `diffusion_b8_R4` | Required evaluation: same cases with b = 8, R = 4 | yes |
 | `study_a_b_R` | b = 4/8/16/32, R = 2/4/8 (R < b), batch 1/16/64, prompt 512, output 128 | yes |
-| `study_b_batch` | Batch 1 to 128, AR vs b = 8, R = 4, prompt 512, output 128 | yes |
+| `study_b_batch` | Batch 1 to 128 (including 49 and 50, around the break-even), AR vs b = 8, R = 4, prompt 512, output 128 | yes |
 | `study_c_prompt` | Prompt 2K/8K/32K, batch 1/8/32, AR vs b = 8, R = 4, output 128 | yes (not with `--quick`) |
 | `baseline` | Same cases as `baseline_after_change`, recorded with the unmodified RAPID-LLM code | no (reference only) |
 | `neutral_b1_R1` | Same cases with b = 1, R = 1 | no (side check) |
@@ -136,7 +136,7 @@ Findings:
   decode speedup is close to b/R (e.g. 1.99× for b = 8, R = 4 and 14.5× for b = 32, R = 2 at
   batch 1).
 - Large batch (compute-bound): each token is processed R times, so R dominates the cost. For
-  b = 8, R = 4, AR decoding catches up between batch 48 (1.03× total) and 64 (0.93×).
+  b = 8, R = 4, AR decoding catches up between batch 48 (1.03× total) and batch 49 (0.93×): the cost of a call jumps there instead of growing smoothly.
 - Long prompts: prefill dominates total time, so a 1.85× decode speedup at batch 1 shrinks to
   1.13× end to end at a 32K prompt.
 - Peak memory is set by prefill and is the same as AR in every case; the decode-phase peak

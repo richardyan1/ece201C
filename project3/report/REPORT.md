@@ -28,13 +28,15 @@ Every section names the slide it reproduces. Llama-3.1-8B, one A100 80 GB.
 
 ## Slide 8: where normal decode catches up (prompt 512, output 128)
 
-Break-even (decode speedup = 1, linear interpolation between the two batch sizes around it): batch 53.2.
+Decode speedup falls from 1.0x or more to below 1.0x between batch 48 and batch 49 (the drop is a step, not a slope: see the call times below).
 
 | Batch | Diffusion call | Normal step | Ratio |
 | --- | --- | --- | --- |
 | 1 | 12.2 ms | 12.1 ms | 1.0x |
 | 16 | 16.2 ms | 13.5 ms | 1.2x |
 | 32 | 24.8 ms | 14.9 ms | 1.7x |
+| 48 | 31.1 ms | 16.3 ms | 1.9x |
+| 49 | 36.8 ms | 16.4 ms | 2.2x |
 | 64 | 40.5 ms | 17.8 ms | 2.3x |
 | 128 | 71.9 ms | 25.4 ms | 2.8x |
 

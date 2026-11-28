@@ -93,15 +93,16 @@ def main():
         w = csv.writer(fh)
         w.writerow(["batch", "decode_speedup", "total_speedup"])
         w.writerows((n, f"{d:.4f}", f"{t:.4f}") for n, d, t in sweep)
-    breakeven = None
+    bracket = None      # first pair of swept batch sizes where decode speedup drops below 1
     for (n0, d0, _), (n1, d1, _) in zip(sweep, sweep[1:]):
         if d0 >= 1 > d1:
-            breakeven = n0 + (1 - d0) * (n1 - n0) / (d1 - d0)   # linear interpolation in batch
+            bracket = (n0, n1)
+            break
     rows = [(n, f"{first_call_ms(bd[n]):.1f} ms", f"{first_call_ms(ar[n]):.1f} ms",
-             f"{first_call_ms(bd[n]) / first_call_ms(ar[n]):.1f}x") for n in (1, 16, 32, 64, 128)]
+             f"{first_call_ms(bd[n]) / first_call_ms(ar[n]):.1f}x") for n in (1, 16, 32, 48, 49, 64, 128)]
     lines += ["## Slide 8: where normal decode catches up (prompt 512, output 128)", "",
-              f"Break-even (decode speedup = 1, linear interpolation between the two batch sizes "
-              f"around it): batch {breakeven:.1f}.", "",
+              f"Decode speedup falls from 1.0x or more to below 1.0x between batch {bracket[0]} and "
+              f"batch {bracket[1]} (the drop is a step, not a slope: see the call times below).", "",
               md_table(["Batch", "Diffusion call", "Normal step", "Ratio"], rows), "",
               "Chart data: `slide08_batch_sweep.csv`; chart: `slide08_batch_sweep.png`.", ""]
     try:
@@ -112,9 +113,10 @@ def main():
         ax.plot(batches, [d for _, d, _ in sweep], marker="o", label="Decode only")
         ax.plot(batches, [t for _, _, t in sweep], marker="s", label="Total (prefill + decode)")
         ax.axhline(1.0, color="gray", lw=1, ls="--")
-        if breakeven:
-            ax.axvline(breakeven, color="gray", lw=1, ls=":")
-            ax.annotate(f"break-even ~ batch {breakeven:.0f}", (breakeven, 1.0),
+        if bracket:
+            mid = sum(bracket) / 2
+            ax.axvline(mid, color="gray", lw=1, ls=":")
+            ax.annotate(f"break-even between batch {bracket[0]} and {bracket[1]}", (mid, 1.0),
                         textcoords="offset points", xytext=(6, 8))
         ax.set_xscale("log", base=2)
         ax.set_xticks(batches)

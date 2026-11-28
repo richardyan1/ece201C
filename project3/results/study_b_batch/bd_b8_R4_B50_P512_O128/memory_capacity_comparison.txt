@@ -1,0 +1,6 @@
+Simulation mode: inference
+Hardware memory capacity (per gpu): 80.00 GiB
+Prefill peak memory usage (per gpu): 24.20 GiB
+Final decode peak memory usage (per gpu): 18.96 GiB
+Max peak memory usage (per gpu): 24.20 GiB
+Remaining memory headroom: 55.80 GiB

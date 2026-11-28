@@ -75,7 +75,7 @@ def study_a_cases():
     return cases
 
 
-STUDY_B_BATCHES = [1, 2, 4, 8, 16, 24, 32, 40, 48, 64, 96, 128]
+STUDY_B_BATCHES = [1, 2, 4, 8, 16, 24, 32, 40, 48, 49, 50, 64, 96, 128]
 
 
 def study_b_cases():
