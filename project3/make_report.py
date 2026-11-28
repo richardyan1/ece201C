@@ -109,24 +109,37 @@ def main():
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
-        fig, ax = plt.subplots(figsize=(7, 4))
-        ax.plot(batches, [d for _, d, _ in sweep], marker="o", label="Decode only")
-        ax.plot(batches, [t for _, _, t in sweep], marker="s", label="Total (prefill + decode)")
-        ax.axhline(1.0, color="gray", lw=1, ls="--")
+        teal, orange, ink, muted = "#0F6B62", "#A65A16", "#1C1B18", "#76604F"
+        fig, ax = plt.subplots(figsize=(7.2, 4.4))
+        fig.patch.set_facecolor("#FBFBF8")
+        ax.set_facecolor("#FBFBF8")
+        ax.plot(batches, [d for _, d, _ in sweep], marker="o", ms=4, lw=2, color=teal, label="Decode only")
+        ax.plot(batches, [t for _, _, t in sweep], marker="s", ms=4, lw=2, color=orange,
+                label="Total (prefill + decode)")
+        ax.axhline(1.0, color=muted, lw=1)
         if bracket:
             mid = sum(bracket) / 2
-            ax.axvline(mid, color="gray", lw=1, ls=":")
-            ax.annotate(f"break-even between batch {bracket[0]} and {bracket[1]}", (mid, 1.0),
-                        textcoords="offset points", xytext=(6, 8))
+            ax.axvline(mid, color=ink, lw=1)
+            ax.annotate(f"Break-even: batch {bracket[0]} to {bracket[1]}", (mid, 1.0), color=ink, fontsize=12,
+                        fontweight="bold", ha="right", textcoords="offset points", xytext=(-8, -22))
         ax.set_xscale("log", base=2)
-        ax.set_xticks(batches)
-        ax.set_xticklabels([str(n) for n in batches])
-        ax.set_xlabel("Batch size")
-        ax.set_ylabel("Speedup over normal decode")
-        ax.set_title("Block diffusion (b = 8, R = 4), prompt 512, output 128")
-        ax.legend()
+        ticks = [1, 2, 4, 8, 16, 32, 64, 128]
+        ax.set_xticks(ticks)
+        ax.set_xticklabels([str(n) for n in ticks])
+        ax.minorticks_off()
+        ax.set_yticks([1.0, 1.5, 2.0])
+        ax.set_yticklabels(["1.0×", "1.5×", "2.0×"])
+        ax.set_ylim(0.65, 2.1)
+        ax.grid(axis="y", color="#D9D6CC", lw=0.8)
+        for side in ("top", "right", "left"):
+            ax.spines[side].set_visible(False)
+        ax.spines["bottom"].set_color(muted)
+        ax.tick_params(colors=muted, labelsize=12, length=0)
+        ax.set_xlabel("Batch size", color=muted, fontsize=12)
+        ax.legend(loc="upper left", bbox_to_anchor=(0, 1.13), ncol=2, frameon=False, fontsize=12,
+                  labelcolor=ink)
         fig.tight_layout()
-        fig.savefig(REPORT / "slide08_batch_sweep.png", dpi=200)
+        fig.savefig(REPORT / "slide08_batch_sweep.png", dpi=200, facecolor=fig.get_facecolor())
     except ImportError:
         lines += ["(matplotlib not installed: chart skipped. `pip install -r project3/requirements-report.txt`)", ""]
 
