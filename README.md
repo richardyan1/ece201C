@@ -66,13 +66,31 @@ prefill, decode and total time; peak memory is in `output/LLM/memory-summary/`.
 
 ## Reproducing the results
 
-`project3/run_cases.py` generates one model config per case, runs RAPID-LLM, and writes every
-run's config, console output and result files to `project3/results/<suite>/`, plus a
-`summary.csv` per suite:
+One command re-runs every suite and regenerates every table and the chart in the presentation:
 
 ```bash
-python project3/run_cases.py diffusion_b8_R4
+pip install matplotlib          # only needed for the chart
+python project3/reproduce.py    # about 25 min; add --quick to skip study C (about 3 min)
 ```
+
+Outputs: `project3/results/<suite>/summary.csv` (raw numbers), `project3/report/REPORT.md`
+(every table and quoted number, labelled by slide) and `project3/report/slide08_batch_sweep.png`
+(the slide 8 chart).
+
+| Presentation | Produced by |
+|---|---|
+| Slide 2 (step times) | `REPORT.md` section "Slide 2" |
+| Slide 6 (checks) | `REPORT.md` section "Slide 6" (prefill comparison); the 36 passing tests: run `pytest -q` |
+| Slide 7 (required runs) | `diffusion_b8_R4`, `baseline_after_change`; `REPORT.md` "Slide 7" |
+| Slide 8 (batch sweep, break-even) | `study_b_batch`; chart and table in `project3/report/` |
+| Slide 9 (b, R grid) | `study_a_b_R`; `REPORT.md` "Slide 9" |
+| Slide 10 (long prompts) | `study_c_prompt`; `REPORT.md` "Slide 10" |
+| Slide 11 (memory) | `REPORT.md` "Slide 11" |
+
+Cases with peak memory above 80 GB (prefill of the whole batch; same for both methods) are
+flagged `over 80 GB` and have `fits_80gb = False` in the CSVs.
+
+To run a single suite: `python project3/run_cases.py <suite>`.
 
 | Suite | Cases |
 |---|---|
