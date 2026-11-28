@@ -3,11 +3,11 @@
 Richard Yan
 
 This repository extends [RAPID-LLM](https://github.com/gkarfakis19/Rapid-LLM) (course branch) to
-model **block diffusion** decoding and compares it with normal autoregressive (AR) decoding of
+model block diffusion decoding and compares it with normal autoregressive (AR) decoding of
 Llama-3.1-8B on one A100 80 GB GPU.
 
-A block diffusion model writes its output in blocks of **b** tokens. Each block is refined over
-**R** model calls, and every call processes all b positions of the block at once while reading the
+A block diffusion model writes its output in blocks of b tokens. Each block is refined over
+R model calls, and every call processes all b positions of the block at once while reading the
 KV cache of all earlier text. Compared with AR decoding (one token per call), a call reads the
 weights and KV cache once for b tokens, but does about b times the compute.
 
@@ -32,7 +32,7 @@ project_param:
 
 ## Modeling assumptions
 
-- Each block takes exactly **R** model calls. The optional extra call that saves the finished
+- Each block takes exactly R model calls. The optional extra call that saves the finished
   block's K/V is not modeled; adding it would multiply the call count by (R+1)/R.
 - Every call attends to all earlier text plus all b positions of the current block.
 - The output length must be a multiple of b.
@@ -66,7 +66,7 @@ prefill, decode and total time; peak memory is in `output/LLM/memory-summary/`.
 
 ## Reproducing the results
 
-Everything in the presentation can be regenerated with one command, run from the repository root
+All results in the presentation can be regenerated with one command, run from the repository root
 after the setup above.
 
 ```bash
@@ -77,11 +77,11 @@ python project3/reproduce.py --quick    # skips the long-prompt study (study C),
 
 `reproduce.py` does two things in order:
 
-1. **Runs the simulations.** It calls `project3/run_cases.py` once for each suite below, one after
+1. Runs the simulations. It calls `project3/run_cases.py` once for each suite below, one after
    another (the runs share `output/LLM/`, so suites cannot run in parallel). Each run's config,
    console output and result files go to `project3/results/<suite>/<case>/`, and each suite's numbers
    go to `project3/results/<suite>/summary.csv`.
-2. **Builds the report.** It calls `project3/make_report.py`, which reads the CSVs and writes
+2. Builds the report. It calls `project3/make_report.py`, which reads the CSVs and writes
    `project3/report/REPORT.md` (every table and number from the slides, labelled by slide),
    `project3/report/slide08_batch_sweep.png` (the slide 8 chart) and `slide08_batch_sweep.csv` (its data).
 
@@ -94,7 +94,7 @@ To run a single suite by hand: `python project3/run_cases.py <suite>`.
 | Suite | Cases | Run by `reproduce.py` |
 |---|---|---|
 | `baseline_after_change` | Normal (AR) decode, batch 1/16/64, prompt 512, output 128/256: the comparison for the required runs | yes |
-| `diffusion_b8_R4` | **Required evaluation**: same cases with b = 8, R = 4 | yes |
+| `diffusion_b8_R4` | Required evaluation: same cases with b = 8, R = 4 | yes |
 | `study_a_b_R` | b = 4/8/16/32, R = 2/4/8 (R < b), batch 1/16/64, prompt 512, output 128 | yes |
 | `study_b_batch` | Batch 1 to 128, AR vs b = 8, R = 4, prompt 512, output 128 | yes |
 | `study_c_prompt` | Prompt 2K/8K/32K, batch 1/8/32, AR vs b = 8, R = 4, output 128 | yes (not with `--quick`) |
@@ -132,14 +132,14 @@ Required evaluation: Llama-3.1-8B, one A100 80 GB, prompt 512, b = 8, R = 4.
 
 Findings:
 
-- **Memory-bound (small batch):** a call costs about the same for b tokens as for one, so the
+- Small batch (memory-bound): a call costs about the same for b tokens as for one, so the
   decode speedup is close to b/R (e.g. 1.99× for b = 8, R = 4 and 14.5× for b = 32, R = 2 at
   batch 1).
-- **Compute-bound (large batch):** each token is processed R times, so R dominates the cost. For
+- Large batch (compute-bound): each token is processed R times, so R dominates the cost. For
   b = 8, R = 4, AR decoding catches up between batch 48 (1.03× total) and 64 (0.93×).
-- **Long prompts:** prefill dominates total time, so a 1.85× decode speedup at batch 1 shrinks to
+- Long prompts: prefill dominates total time, so a 1.85× decode speedup at batch 1 shrinks to
   1.13× end to end at a 32K prompt.
-- **Peak memory** is set by prefill and is the same as AR in every case; the decode-phase peak
+- Peak memory is set by prefill and is the same as AR in every case; the decode-phase peak
   grows by at most 0.5 GiB.
 
 ## Repository layout
@@ -153,5 +153,3 @@ Findings:
 | `project3/results/` | Configs, console output, result files and `summary.csv` for every run |
 | `COURSE_README.md`, `PROJECTS.md` | Course project descriptions and code pointers |
 | `RAPID-LLM_README.md` | Original RAPID-LLM README: setup, configs and how a decode step is priced |
-
-RAPID-LLM is licensed under the Apache License 2.0 (see `LICENSE`).
