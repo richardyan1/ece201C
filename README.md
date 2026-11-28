@@ -66,46 +66,56 @@ prefill, decode and total time; peak memory is in `output/LLM/memory-summary/`.
 
 ## Reproducing the results
 
-One command re-runs every suite and regenerates every table and the chart in the presentation:
+Everything in the presentation can be regenerated with one command, run from the repository root
+after the setup above.
 
 ```bash
-pip install matplotlib          # only needed for the chart
-python project3/reproduce.py    # about 25 min; add --quick to skip study C (about 3 min)
+pip install matplotlib                  # only for the slide 8 chart
+python project3/reproduce.py            # full run, about 25 minutes
+python project3/reproduce.py --quick    # skips the long-prompt study (study C), about 3 minutes
 ```
 
-Outputs: `project3/results/<suite>/summary.csv` (raw numbers), `project3/report/REPORT.md`
-(every table and quoted number, labelled by slide) and `project3/report/slide08_batch_sweep.png`
-(the slide 8 chart).
+`reproduce.py` does two things in order:
 
-| Presentation | Produced by |
+1. **Runs the simulations.** It calls `project3/run_cases.py` once for each suite below, one after
+   another (the runs share `output/LLM/`, so suites cannot run in parallel). Each run's config,
+   console output and result files go to `project3/results/<suite>/<case>/`, and each suite's numbers
+   go to `project3/results/<suite>/summary.csv`.
+2. **Builds the report.** It calls `project3/make_report.py`, which reads the CSVs and writes
+   `project3/report/REPORT.md` (every table and number from the slides, labelled by slide),
+   `project3/report/slide08_batch_sweep.png` (the slide 8 chart) and `slide08_batch_sweep.csv` (its data).
+
+With `--quick`, study C is not re-run and the report uses the committed study C results.
+To regenerate only the report from the existing CSVs: `python project3/make_report.py`.
+To run a single suite by hand: `python project3/run_cases.py <suite>`.
+
+### Suites
+
+| Suite | Cases | Run by `reproduce.py` |
+|---|---|---|
+| `baseline_after_change` | Normal (AR) decode, batch 1/16/64, prompt 512, output 128/256: the comparison for the required runs | yes |
+| `diffusion_b8_R4` | **Required evaluation**: same cases with b = 8, R = 4 | yes |
+| `study_a_b_R` | b = 4/8/16/32, R = 2/4/8 (R < b), batch 1/16/64, prompt 512, output 128 | yes |
+| `study_b_batch` | Batch 1 to 128, AR vs b = 8, R = 4, prompt 512, output 128 | yes |
+| `study_c_prompt` | Prompt 2K/8K/32K, batch 1/8/32, AR vs b = 8, R = 4, output 128 | yes (not with `--quick`) |
+| `baseline` | Same cases as `baseline_after_change`, recorded with the unmodified RAPID-LLM code | no (reference only) |
+| `neutral_b1_R1` | Same cases with b = 1, R = 1 | no (side check) |
+
+### Which output goes with which slide
+
+| Presentation | Where to find it |
 |---|---|
-| Slide 2 (step times) | `REPORT.md` section "Slide 2" |
-| Slide 6 (checks) | `REPORT.md` section "Slide 6" (prefill comparison); the 36 passing tests: run `pytest -q` |
-| Slide 7 (required runs) | `diffusion_b8_R4`, `baseline_after_change`; `REPORT.md` "Slide 7" |
-| Slide 8 (batch sweep, break-even) | `study_b_batch`; chart and table in `project3/report/` |
-| Slide 9 (b, R grid) | `study_a_b_R`; `REPORT.md` "Slide 9" |
-| Slide 10 (long prompts) | `study_c_prompt`; `REPORT.md` "Slide 10" |
-| Slide 11 (memory) | `REPORT.md` "Slide 11" |
+| Slide 2 (time per normal decode step) | `REPORT.md`, section "Slide 2" |
+| Slide 6 (checks) | `REPORT.md`, section "Slide 6" (prefill comparison); tests: `pytest -q` (36 pass) |
+| Slide 7 (required runs) | `REPORT.md`, section "Slide 7"; raw: `results/diffusion_b8_R4/summary.csv` and `results/baseline_after_change/summary.csv` |
+| Slide 8 (where normal decode catches up) | `REPORT.md`, section "Slide 8"; chart `project3/report/slide08_batch_sweep.png`; raw: `results/study_b_batch/summary.csv` |
+| Slide 9 (b and R grid) | `REPORT.md`, section "Slide 9"; raw: `results/study_a_b_R/summary.csv` |
+| Slide 10 (long prompts) | `REPORT.md`, section "Slide 10"; raw: `results/study_c_prompt/summary.csv` |
+| Slide 11 (memory) | `REPORT.md`, section "Slide 11" |
 
-Cases with peak memory above 80 GB (prefill of the whole batch; same for both methods) are
-flagged `over 80 GB` and have `fits_80gb = False` in the CSVs.
-
-To run a single suite: `python project3/run_cases.py <suite>`.
-
-| Suite | Cases |
-|---|---|
-| `baseline` | AR decode, batch 1/16/64, prompt 512, output 128/256 (recorded with the unmodified code) |
-| `baseline_after_change` | Same cases with the modified code and no `project_param` |
-| `neutral_b1_R1` | Same cases with b = 1, R = 1 |
-| `diffusion_b8_R4` | Required evaluation: same cases with b = 8, R = 4 |
-| `study_a_b_R` | b = 4/8/16/32, R = 2/4/8 (R < b), batch 1/16/64, prompt 512, output 128 |
-| `study_b_batch` | Batch 1–128, AR vs b = 8, R = 4, prompt 512, output 128 |
-| `study_c_prompt` | Prompt 2K/8K/32K, batch 1/8/32, AR vs b = 8, R = 4, output 128 |
-
-Run one suite at a time: all runs share the `output/LLM/` folder.
-
-**Check:** `baseline_after_change` and `neutral_b1_R1` reproduce `baseline` exactly (result files
-byte-for-byte identical).
+Cases whose peak memory is above 80 GB (the prefill of the whole batch, the same for both methods)
+are marked `over 80 GB` in `REPORT.md` and have `fits_80gb = False` in the CSVs. In the block
+diffusion rows of the CSVs, ignore the `tok_s_start` and `tok_s_end` columns (see the assumptions).
 
 ## Results
 
@@ -136,7 +146,10 @@ Findings:
 
 | Path | Contents |
 |---|---|
-| `project3/run_cases.py` | Runs the suites above and collects the results |
+| `project3/reproduce.py` | One-shot reproduction: runs the suites, then builds the report |
+| `project3/run_cases.py` | Runs one suite and collects its results |
+| `project3/make_report.py` | Builds `REPORT.md` and the slide 8 chart from the result CSVs |
+| `project3/report/` | Generated report, chart and chart data |
 | `project3/results/` | Configs, console output, result files and `summary.csv` for every run |
 | `COURSE_README.md`, `PROJECTS.md` | Course project descriptions and code pointers |
 | `RAPID-LLM_README.md` | Original RAPID-LLM README: setup, configs and how a decode step is priced |
